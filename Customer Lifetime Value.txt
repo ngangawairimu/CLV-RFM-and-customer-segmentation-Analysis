@@ -1,0 +1,39 @@
+-- Step 1: Calculate total spending and purchase count for each user
+WITH purchases AS (
+    SELECT 
+        user_pseudo_id,  -- Unique identifier for the customer
+        SUM(purchase_revenue_in_usd) AS total_spent,  -- Total amount spent by each customer
+        COUNT(*) AS purchase_count  -- Total number of purchases made by each customer
+    FROM 
+        turing_data_analytics.raw_events  -- Table containing event data, where purchase events are logged
+    WHERE 
+        event_name = 'purchase'  -- Filter to only include 'purchase' events
+    GROUP BY 
+        user_pseudo_id  -- Grouping by customer ID to calculate total spent and purchase count per customer
+),
+
+-- Step 2: Calculate Average Order Value (AOV) and Purchase Frequency (PF)
+aov_pf AS (
+    SELECT 
+        AVG(total_spent / purchase_count) AS AOV,  -- Calculate the average order value for all customers
+        -- Average amount spent per purchase, which is total spent divided by number of purchases.
+        
+        SUM(purchase_count) / COUNT(DISTINCT user_pseudo_id) AS PF  -- Calculate purchase frequency (PF)
+        -- Purchase frequency is calculated by taking the total number of purchases (SUM(purchase_count)) 
+        -- and dividing it by the number of unique customers (COUNT(DISTINCT user_pseudo_id)) 
+        -- to get the average number of purchases per customer.
+    FROM 
+        purchases  -- Using the result of the 'purchases' CTE to get the aggregated data
+)
+
+-- Final Step: Calculate Customer Value (CV) and Customer Lifetime Value (CLV)
+SELECT 
+    ROUND(AOV) AS Average_Order_Value,  -- Round and display the average order value (AOV) for better readability
+    ROUND(PF) AS purchase_frequency,  -- Round and display the average purchase frequency (PF) for better readability
+    ROUND(AOV * PF) AS Customer_value,  -- Calculate Customer Value (CV), which is the product of AOV and PF
+    -- Customer Value (CV) represents the average total value a customer generates for the business
+    ROUND(AOV * PF * 3) AS CLV  -- Calculate Customer Lifetime Value (CLV) by assuming a 3-year customer lifespan
+    -- CLV is the expected revenue from a customer over 3 years. 
+    -- This assumes that the average Customer Value (CV) will remain constant for 3 years.
+FROM 
+    aov_pf;  -- Use the AOV and PF values calculated in the previous step for the final calculations
